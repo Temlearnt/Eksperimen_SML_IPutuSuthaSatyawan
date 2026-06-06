@@ -1,0 +1,68 @@
+name: Auto Preprocessing Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dataset_raw/Retail_Transactions_Dataset.csv'
+      - 'preprocessing/automate_IPutuSuthaSatyawan.py'
+
+permissions:
+  contents: write
+
+jobs:
+  preprocessing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas numpy scikit-learn
+
+      - name: List files before preprocessing (DEBUG)
+        run: |
+          echo "=== Root directory ==="
+          ls -la
+          echo "=== Preprocessing directory ==="
+          ls -la preprocessing/ || echo "Folder preprocessing not found"
+          echo "=== Dataset_raw directory ==="  
+          ls -la dataset_raw/ || echo "Folder dataset_raw not found"    # <-- GANTI
+
+      - name: Run Preprocessing
+        run: |
+          cd preprocessing
+          python automate_IPutuSuthaSatyawan.py
+          echo "=== After preprocessing ==="
+          ls -la
+
+      - name: Commit Preprocessed Dataset
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+
+          echo "=== Checking generated file ==="
+          ls -la preprocessing/
+
+          if [ -f "preprocessing/Retail_Transactions_preprocessing.csv" ]; then
+            git add preprocessing/Retail_Transactions_preprocessing.csv
+
+            if ! git diff --staged --quiet; then
+              git commit -m "chore: update dataset preprocessing [auto]"
+              git push
+              echo "=== Changes pushed ==="
+            else
+              echo "=== No changes detected ==="
+            fi
+          else
+            echo "ERROR: preprocessing/Retail_Transactions_preprocessing.csv not found"
+            exit 1
+          fi
